@@ -13,5 +13,6 @@ fields:
   destination: String?
   via: String?
   lineShortName: String?
+  lineTransportMode: String?
   lineBackgroundColor: String?
   lineForegroundColor: String?

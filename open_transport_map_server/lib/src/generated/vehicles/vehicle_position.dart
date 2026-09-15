@@ -28,6 +28,7 @@ abstract class VehiclePosition
     this.destination,
     this.via,
     this.lineShortName,
+    this.lineTransportMode,
     this.lineBackgroundColor,
     this.lineForegroundColor,
   });
@@ -46,6 +47,7 @@ abstract class VehiclePosition
     String? destination,
     String? via,
     String? lineShortName,
+    String? lineTransportMode,
     String? lineBackgroundColor,
     String? lineForegroundColor,
   }) = _VehiclePositionImpl;
@@ -69,6 +71,7 @@ abstract class VehiclePosition
       destination: jsonSerialization['destination'] as String?,
       via: jsonSerialization['via'] as String?,
       lineShortName: jsonSerialization['lineShortName'] as String?,
+      lineTransportMode: jsonSerialization['lineTransportMode'] as String?,
       lineBackgroundColor: jsonSerialization['lineBackgroundColor'] as String?,
       lineForegroundColor: jsonSerialization['lineForegroundColor'] as String?,
     );
@@ -100,6 +103,8 @@ abstract class VehiclePosition
 
   String? lineShortName;
 
+  String? lineTransportMode;
+
   String? lineBackgroundColor;
 
   String? lineForegroundColor;
@@ -121,6 +126,7 @@ abstract class VehiclePosition
     String? destination,
     String? via,
     String? lineShortName,
+    String? lineTransportMode,
     String? lineBackgroundColor,
     String? lineForegroundColor,
   });
@@ -141,6 +147,7 @@ abstract class VehiclePosition
       if (destination != null) 'destination': destination,
       if (via != null) 'via': via,
       if (lineShortName != null) 'lineShortName': lineShortName,
+      if (lineTransportMode != null) 'lineTransportMode': lineTransportMode,
       if (lineBackgroundColor != null)
         'lineBackgroundColor': lineBackgroundColor,
       if (lineForegroundColor != null)
@@ -165,6 +172,7 @@ abstract class VehiclePosition
       if (destination != null) 'destination': destination,
       if (via != null) 'via': via,
       if (lineShortName != null) 'lineShortName': lineShortName,
+      if (lineTransportMode != null) 'lineTransportMode': lineTransportMode,
       if (lineBackgroundColor != null)
         'lineBackgroundColor': lineBackgroundColor,
       if (lineForegroundColor != null)
@@ -195,6 +203,7 @@ class _VehiclePositionImpl extends VehiclePosition {
     String? destination,
     String? via,
     String? lineShortName,
+    String? lineTransportMode,
     String? lineBackgroundColor,
     String? lineForegroundColor,
   }) : super._(
@@ -211,6 +220,7 @@ class _VehiclePositionImpl extends VehiclePosition {
          destination: destination,
          via: via,
          lineShortName: lineShortName,
+         lineTransportMode: lineTransportMode,
          lineBackgroundColor: lineBackgroundColor,
          lineForegroundColor: lineForegroundColor,
        );
@@ -233,6 +243,7 @@ class _VehiclePositionImpl extends VehiclePosition {
     Object? destination = _Undefined,
     Object? via = _Undefined,
     Object? lineShortName = _Undefined,
+    Object? lineTransportMode = _Undefined,
     Object? lineBackgroundColor = _Undefined,
     Object? lineForegroundColor = _Undefined,
   }) {
@@ -256,6 +267,9 @@ class _VehiclePositionImpl extends VehiclePosition {
       lineShortName: lineShortName is String?
           ? lineShortName
           : this.lineShortName,
+      lineTransportMode: lineTransportMode is String?
+          ? lineTransportMode
+          : this.lineTransportMode,
       lineBackgroundColor: lineBackgroundColor is String?
           ? lineBackgroundColor
           : this.lineBackgroundColor,

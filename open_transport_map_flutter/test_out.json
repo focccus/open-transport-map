@@ -1,0 +1,50 @@
+Resolving dependencies in `C:\dev\Flutter\open_transport_map`...
+Downloading packages...
+  _fe_analyzer_shared 103.0.0 (108.0.0 available)
+  amazon_cognito_identity_dart_2 3.8.2 (4.0.1 available)
+  analyzer 13.3.0 (14.4.0 available)
+  animations 2.2.0 (3.0.0 available)
+! flutter_secure_storage 10.3.4 (overridden) (11.1.1 available)
+  flutter_secure_storage_darwin 0.3.2 (0.4.2 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  package_config 2.2.0 (3.0.0 available)
+  sqlparser 0.44.5 (0.45.0 available)
+  test 1.31.1 (1.32.0 available)
+  test_api 0.7.12 (0.7.14 available)
+  test_core 0.6.18 (0.6.20 available)
+  window_to_front 0.0.4 (1.0.0 available)
+Got dependencies in `C:\dev\Flutter\open_transport_map`!
+13 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+{"protocolVersion":"0.1.1","runnerVersion":"1.31.1","pid":15016,"type":"start","time":0}
+{"suite":{"id":0,"platform":"vm","path":"C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"suite","time":0}
+{"test":{"id":1,"name":"loading C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart","suiteID":0,"groupIDs":[],"metadata":{"skip":false,"skipReason":null},"line":null,"column":null,"url":null},"type":"testStart","time":1}
+{"count":1,"time":5,"type":"allSuites"}
+{"testID":1,"result":"success","skipped":false,"hidden":true,"type":"testDone","time":1728}
+{"group":{"id":2,"suiteID":0,"parentID":null,"name":"","metadata":{"skip":false,"skipReason":null},"testCount":11,"line":null,"column":null,"url":null},"type":"group","time":1730}
+{"group":{"id":3,"suiteID":0,"parentID":2,"name":"classifyVehicle by transport mode","metadata":{"skip":false,"skipReason":null},"testCount":7,"line":17,"column":3,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"group","time":1730}
+{"test":{"id":4,"name":"classifyVehicle by transport mode train mode beats its short name","suiteID":0,"groupIDs":[2,3],"metadata":{"skip":false,"skipReason":null},"line":18,"column":5,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"testStart","time":1730}
+{"testID":4,"result":"success","skipped":false,"hidden":false,"type":"testDone","time":1753}
+{"test":{"id":5,"name":"classifyVehicle by transport mode tram mode separates trams from buses sharing the same number","suiteID":0,"groupIDs":[2,3],"metadata":{"skip":false,"skipReason":null},"line":25,"column":5,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"testStart","time":1754}
+{"testID":5,"result":"success","skipped":false,"hidden":false,"type":"testDone","time":1757}
+{"test":{"id":6,"name":"classifyVehicle by transport mode the tram X is not an express bus","suiteID":0,"groupIDs":[2,3],"metadata":{"skip":false,"skipReason":null},"line":30,"column":5,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"testStart","time":1758}
+{"testID":6,"result":"success","skipped":false,"hidden":false,"type":"testDone","time":1761}
+{"test":{"id":7,"name":"classifyVehicle by transport mode ferry mode is the boat type","suiteID":0,"groupIDs":[2,3],"metadata":{"skip":false,"skipReason":null},"line":35,"column":5,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"testStart","time":1761}
+{"testID":7,"result":"success","skipped":false,"hidden":false,"type":"testDone","time":1765}
+{"test":{"id":8,"name":"classifyVehicle by transport mode buses and taxis share the bus type","suiteID":0,"groupIDs":[2,3],"metadata":{"skip":false,"skipReason":null},"line":41,"column":5,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"testStart","time":1765}
+{"testID":8,"result":"success","skipped":false,"hidden":false,"type":"testDone","time":1769}
+{"test":{"id":9,"name":"classifyVehicle by transport mode two digit bus numbers are metrobuses","suiteID":0,"groupIDs":[2,3],"metadata":{"skip":false,"skipReason":null},"line":48,"column":5,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"testStart","time":1769}
+{"testID":9,"result":"success","skipped":false,"hidden":false,"type":"testDone","time":1774}
+{"test":{"id":10,"name":"classifyVehicle by transport mode x prefixed buses are express buses","suiteID":0,"groupIDs":[2,3],"metadata":{"skip":false,"skipReason":null},"line":55,"column":5,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"testStart","time":1774}
+{"testID":10,"result":"success","skipped":false,"hidden":false,"type":"testDone","time":1777}
+{"group":{"id":11,"suiteID":0,"parentID":2,"name":"classifyVehicle without relayed mode","metadata":{"skip":false,"skipReason":null},"testCount":1,"line":65,"column":3,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"group","time":1777}
+{"test":{"id":12,"name":"classifyVehicle without relayed mode falls back to short name patterns","suiteID":0,"groupIDs":[2,11],"metadata":{"skip":false,"skipReason":null},"line":66,"column":5,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"testStart","time":1778}
+{"testID":12,"result":"success","skipped":false,"hidden":false,"type":"testDone","time":1780}
+{"group":{"id":13,"suiteID":0,"parentID":2,"name":"VehicleViewOptions","metadata":{"skip":false,"skipReason":null},"testCount":3,"line":77,"column":3,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"group","time":1780}
+{"test":{"id":14,"name":"VehicleViewOptions defaults match the documented behaviour","suiteID":0,"groupIDs":[2,13],"metadata":{"skip":false,"skipReason":null},"line":78,"column":5,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"testStart","time":1780}
+{"testID":14,"result":"success","skipped":false,"hidden":false,"type":"testDone","time":1783}
+{"test":{"id":15,"name":"VehicleViewOptions kinds toggle without disturbing other settings","suiteID":0,"groupIDs":[2,13],"metadata":{"skip":false,"skipReason":null},"line":88,"column":5,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"testStart","time":1783}
+{"testID":15,"result":"success","skipped":false,"hidden":false,"type":"testDone","time":1786}
+{"test":{"id":16,"name":"VehicleViewOptions sameLayers only reports creation-time differences","suiteID":0,"groupIDs":[2,13],"metadata":{"skip":false,"skipReason":null},"line":97,"column":5,"url":"file:///C:/dev/Flutter/open_transport_map/open_transport_map_flutter/test/vehicle_view_options_test.dart"},"type":"testStart","time":1786}
+{"testID":16,"result":"success","skipped":false,"hidden":false,"type":"testDone","time":1789}
+{"success":true,"type":"done","time":1813}

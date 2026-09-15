@@ -8,6 +8,8 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:open_transport_map_client/open_transport_map_client.dart';
 
 import '../client.dart';
+import '../models/vehicle_view_options.dart';
+import '../widgets/vehicle_view_options_sheet.dart';
 
 /// Live map of Västtrafik vehicle positions, relayed through the Serverpod
 /// streaming endpoint `vehiclePositions.watchVehicles`.
@@ -15,10 +17,14 @@ import '../client.dart';
 /// Rendering strategy (perf):
 /// - Low zoom: clustered circle layer only (GPU, one source update per event).
 ///   Individual dots are colored per line with the short name as label.
-/// - High zoom (>= [_markerZoom]): animated arrow symbols only (cluster
-///   and dot layers hide via maxzoom), capped at
-///   [_maxMarkers] vehicles nearest the viewport center. Each animates at its
-///   own speed derived from `speedKmh`, so slow vehicles crawl, fast ones fly.
+/// - High zoom (>= the animation zoom, user-configurable): animated arrow
+///   symbols only (cluster and dot layers hide via maxzoom), capped at the
+///   configured number of vehicles nearest the viewport center. Each animates
+///   at its own speed derived from `speedKmh`, so slow vehicles crawl, fast
+///   ones fly.
+///
+/// The top-left button opens a sheet for vehicle types, clustering, and
+/// animation settings; see `VehicleViewOptions`.
 ///
 /// Train lines (short name containing `tåg`) show a train pictogram instead of
 /// the line number. The pictogram is a second, unrotated symbol so it stays
@@ -53,11 +59,15 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
   static const _dotLabelLayerId = 'vehicles-dot-labels';
   static const _trainDotLayerId = 'vehicles-train-icons';
 
-  /// Detailed markers only at street-level zoom.
-  static const _markerZoom = 13.5;
+  /// Animated markers are drawn from one GeoJSON source rather than as
+  /// per-marker annotations: a source update moves every marker in a single
+  /// platform call, where annotations cost one call each, per frame.
+  static const _markerSourceId = 'vehicles-markers';
+  static const _markerLayerId = 'vehicles-marker-icons';
+  static const _markerGlyphLayerId = 'vehicles-marker-glyphs';
 
-  /// Max animated symbols at once. Nearest to viewport center win.
-  static const _maxMarkers = 50;
+  // Roughly Gothenburg, where most Västtrafik vehicles are.
+  /// Cluster radius in pixels.
 
   /// Cluster radius in pixels.
   static const _clusterRadius = 50.0;
@@ -67,9 +77,6 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
 
   /// Scale of the 32px train glyph; ~12px, inside the 22px marker body.
   static const _trainGlyphSize = 0.38;
-
-  /// Minimum points to form a cluster. Below this, show single dots.
-  static const _clusterMinPoints = 10.0;
 
   /// Restart upstream stream at most this often while panning/zooming.
   static const _viewportDebounce = Duration(milliseconds: 800);
@@ -99,11 +106,32 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
   bool _styleReady = false;
   bool _imageReady = false;
   bool _clusterReady = false;
+
+  /// Vehicles currently drawn as markers: enabled types, in viewport, nearest
+  /// to the center first, capped at the configured maximum.
+  Set<String> _wantedMarkers = const {};
   String? _error;
   bool _connected = false;
   int _eventCount = 0;
   double _zoom = _initialCamera.zoom;
   LatLngBounds _viewport = _initialBounds;
+  VehicleViewOptions _options = const VehicleViewOptions();
+
+  /// Whether animated markers are the active representation right now.
+  bool get _markersActive =>
+      _options.animations && _zoom >= _options.animationZoom;
+
+  /// Upper zoom bound for cluster and dot layers, so they hand over to the
+  /// animated markers. Null when animations are off: dots stay at every zoom.
+  double? get _dotsMaxZoom =>
+      _options.animations ? _options.animationZoom : null;
+
+  /// Zoom at which the marker layers become visible. Above the range when
+  /// animations are off, which hides them for good.
+  double get _markersMinZoom =>
+      _options.animations ? _options.animationZoom : 24;
+
+  /// True when the two source families need the same map source and layers.
 
   @override
   void initState() {
@@ -182,11 +210,10 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
 
   Future<void> _onDelta(VehicleDelta delta) async {
     final now = DateTime.now();
+    // Removed vehicles simply drop out of the marker set and the source data;
+    // there is no per-marker handle to release any more.
     for (final removedId in delta.removed) {
-      final animated = _vehicles.remove(removedId);
-      if (animated != null) {
-        unawaited(_removeSymbol(animated));
-      }
+      _vehicles.remove(removedId);
     }
     for (final vehicle in delta.updated) {
       final existing = _vehicles[vehicle.vehicleId];
@@ -228,56 +255,71 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
     return dLat * dLat + dLng * dLng;
   }
 
-  /// Show at most [_maxMarkers] symbols: nearest in-viewport vehicles win.
-  /// Runs on every delta and zoom change; cheap set math, no platform calls
-  /// for unchanged vehicles.
+  /// Show at most [_options.maxAnimatedVehicles] symbols: enabled types only,
+  /// nearest in-viewport vehicles win. Runs on every delta and zoom change;
+  /// cheap set math, no platform calls for unchanged vehicles.
+  /// Recomputes the marker set and pushes what the current zoom shows.
+  ///
+  /// Above the animation zoom the clustered layers are hidden, so their source
+  /// is left stale instead of re-clustered every second; below it the markers
+  /// are hidden and only the cluster source is refreshed.
   Future<void> _syncSymbolsToZoom() async {
     if (!_styleReady || !_imageReady) return;
-    if (_zoom < _markerZoom) {
-      for (final animated in _vehicles.values) {
-        if (animated.symbol != null || animated.addInFlight) {
-          unawaited(_removeSymbol(animated));
-        }
-      }
+    _updateWantedMarkers();
+    if (_markersActive) {
+      await _refreshMarkerSource();
+      return;
+    }
+    await _refreshClusterSource();
+  }
+
+  /// Nearest-first selection of the vehicles that get an animated marker.
+  void _updateWantedMarkers() {
+    if (!_markersActive) {
+      _wantedMarkers = const {};
       return;
     }
     final center = _viewportCenter;
     final candidates =
-        _vehicles.values.where((a) => _inViewport(a.current)).toList()..sort(
-          (a, b) =>
-              _distSq(
-                a.current.latitude,
-                a.current.longitude,
-                center.latitude,
-                center.longitude,
-              ).compareTo(
+        _vehicles.values
+            .where(
+              // Type filter applies here too, so disabling a type also
+              // withdraws its markers and frees up the cap.
+              (a) =>
+                  _options.showsKind(classifyVehicle(a.current)) &&
+                  _inViewport(a.current),
+            )
+            .toList()
+          ..sort(
+            (a, b) =>
                 _distSq(
-                  b.current.latitude,
-                  b.current.longitude,
+                  a.current.latitude,
+                  a.current.longitude,
                   center.latitude,
                   center.longitude,
+                ).compareTo(
+                  _distSq(
+                    b.current.latitude,
+                    b.current.longitude,
+                    center.latitude,
+                    center.longitude,
+                  ),
                 ),
-              ),
-        );
-    final wanted = {
-      for (final a in candidates.take(_maxMarkers)) a.current.vehicleId,
+          );
+    _wantedMarkers = {
+      for (final a in candidates.take(_options.maxAnimatedVehicles))
+        a.current.vehicleId,
     };
-    for (final animated in _vehicles.values) {
-      final id = animated.current.vehicleId;
-      final has = animated.symbol != null || animated.addInFlight;
-      if (wanted.contains(id) && !has) {
-        animated.snap();
-        unawaited(_addSymbol(animated));
-      } else if (!wanted.contains(id) && has) {
-        unawaited(_removeSymbol(animated));
-      }
-    }
   }
 
   /// Throttled clustered-source refresh: at most one platform call per
   /// [_sourceThrottle], coalescing the ~1/s SSE events.
   void _scheduleClusterRefresh() {
     if (!_clusterReady) return;
+    if (_markersActive) {
+      // Layers are hidden up here; the next zoom-out refreshes them.
+      return;
+    }
     if (_sourceTimer != null) {
       _sourceUpdatePending = true;
       return;
@@ -295,26 +337,30 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
   Map<String, dynamic> _featureCollection() {
     return {
       'type': 'FeatureCollection',
-      'features': _vehicles.values.map((a) {
-        final v = a.current;
-        final train = a.isTrain;
-        return {
-          'type': 'Feature',
-          'id': v.vehicleId,
-          'properties': {
-            'vehicleId': v.vehicleId,
-            // Train lines show an icon instead of the line number.
-            'label': train ? '' : _labelFor(v),
-            'bgColor': _bgColorFor(v),
-            'fgColor': _fgColorFor(v),
-            'isTrain': train ? 1 : 0,
-          },
-          'geometry': {
-            'type': 'Point',
-            'coordinates': [v.longitude, v.latitude],
-          },
-        };
-      }).toList(),
+      'features': _vehicles.values
+          // Type filter is applied to the source, so cluster counts follow it.
+          .where((a) => _options.showsKind(classifyVehicle(a.current)))
+          .map((a) {
+            final v = a.current;
+            final train = a.isTrain;
+            return {
+              'type': 'Feature',
+              'id': v.vehicleId,
+              'properties': {
+                'vehicleId': v.vehicleId,
+                // Train lines show an icon instead of the line number.
+                'label': train ? '' : _labelFor(v),
+                'bgColor': _bgColorFor(v),
+                'fgColor': _fgColorFor(v),
+                'isTrain': train ? 1 : 0,
+              },
+              'geometry': {
+                'type': 'Point',
+                'coordinates': [v.longitude, v.latitude],
+              },
+            };
+          })
+          .toList(),
     };
   }
 
@@ -344,6 +390,11 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
   Future<void> _refreshClusterSource() async {
     final controller = _mapController;
     if (controller == null || !_styleReady || !_clusterReady) return;
+    if (_markersActive) {
+      // Hidden above the animation zoom; re-clustering 1300 points for nothing
+      // is the most expensive thing this screen could do.
+      return;
+    }
     try {
       await controller.setGeoJsonSource(
         _clusterSourceId,
@@ -355,187 +406,131 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
     }
   }
 
+  /// One source update draws every animated marker, replacing what used to be
+  /// one `updateSymbol` platform call per marker per frame.
+  Future<void> _refreshMarkerSource() async {
+    final controller = _mapController;
+    if (controller == null || !_styleReady) return;
+    if (!_markersActive) return;
+    try {
+      await controller.setGeoJsonSource(
+        _markerSourceId,
+        _markerFeatureCollection(),
+      );
+    } catch (e) {
+      debugPrint('marker source update failed: $e');
+    }
+  }
+
+  /// Features for the marker layers. The layers are data-driven, so rotating,
+  /// colouring and labelling happen on the GPU without further calls.
+  Map<String, dynamic> _markerFeatureCollection() {
+    final features = <Map<String, dynamic>>[];
+    for (final animated in _vehicles.values) {
+      if (!_wantedMarkers.contains(animated.current.vehicleId)) continue;
+      final train = animated.isTrain;
+      final label = train ? '' : animated.displayLabel;
+      features.add({
+        'type': 'Feature',
+        'id': animated.current.vehicleId,
+        'properties': {
+          'icon': _arrowImageName,
+          'rotate': animated.renderedCourse,
+          'color': animated.displayColor,
+          'isTrain': train ? 1 : 0,
+          'label': label,
+          'textColor': animated.displayTextColor,
+          'textSize': train ? 0 : _textSizeFor(label),
+          'textOffset': [_textOffset.dx, _textOffset.dy],
+        },
+        'geometry': {
+          'type': 'Point',
+          'coordinates': [
+            animated.renderedPosition.longitude,
+            animated.renderedPosition.latitude,
+          ],
+        },
+      });
+    }
+    return {'type': 'FeatureCollection', 'features': features};
+  }
+
   /// Ticker-driven: every vehicle advances by real elapsed time at its own
   /// reported ground speed. Slow vehicles crawl, fast ones fly. Stationary
   /// (< ~2 km/h) vehicles hold position.
   void _tick(Duration elapsed) {
     final dt = elapsed - _lastTick;
     _lastTick = elapsed;
-    final controller = _mapController;
-    if (controller == null ||
+    if (_mapController == null ||
         !_styleReady ||
         !_imageReady ||
-        _zoom < _markerZoom) {
+        !_markersActive) {
       return;
     }
     final dtSeconds = dt.inMicroseconds / 1e6;
     if (dtSeconds <= 0 || dtSeconds > 5) return;
-    final push = elapsed - _lastMarkerPush >= _markerPushInterval;
-    if (push) _lastMarkerPush = elapsed;
+    var moved = false;
     for (final animated in _vehicles.values) {
-      final symbol = animated.symbol;
-      if (symbol == null) continue;
-      final moved = animated.advance(dtSeconds);
-      if (!push || !moved) continue;
-      // The marker image is baked per train/non-train, so a flip between the
-      // two needs a fresh symbol rather than an in-place update.
-      if (animated.renderedTrain != animated.isTrain) {
-        unawaited(_rebuildSymbol(animated));
-        continue;
-      }
-      final pos = animated.renderedPosition;
-      final label = animated.displayLabel;
-      final train = animated.renderedTrain;
-      unawaited(
-        _updateSymbolSafe(
-          controller,
-          symbol,
-          SymbolOptions(
-            geometry: pos,
-            iconRotate: animated.renderedCourse,
-            iconImage: _arrowImageName,
-            iconColor: animated.displayColor,
-            textField: train ? null : label,
-            textColor: train ? null : animated.displayTextColor,
-            textSize: train ? null : _textSizeFor(label),
-            textOffset: train ? null : _textOffset,
-          ),
-        ),
-      );
-      // The glyph rides along without the course rotation, so the pictogram
-      // stays upright while the arrow keeps pointing the direction.
-      final glyph = animated.glyph;
-      if (glyph != null) {
-        unawaited(
-          _updateSymbolSafe(
-            controller,
-            glyph,
-            SymbolOptions(geometry: pos, iconColor: animated.displayTextColor),
-          ),
-        );
-      }
+      if (!_wantedMarkers.contains(animated.current.vehicleId)) continue;
+      if (animated.advance(dtSeconds)) moved = true;
     }
+    final push = elapsed - _lastMarkerPush >= _markerPushInterval;
+    if (!moved || !push) return;
+    _lastMarkerPush = elapsed;
+    unawaited(_refreshMarkerSource());
   }
 
-  Future<void> _addSymbol(_AnimatedVehicle animated) async {
-    final controller = _mapController;
-    if (controller == null ||
-        !_styleReady ||
-        !_imageReady ||
-        _zoom < _markerZoom) {
-      return;
-    }
-    // Guard against overlapping sync runs: the await below yields, so a
-    // second _syncSymbolsToZoom would otherwise start a duplicate add and
-    // leak the first native symbol as an undeletable trace.
-    if (animated.symbol != null || animated.addInFlight) return;
-    animated.addInFlight = true;
-    animated.dropAfterAdd = false;
-    Symbol? added;
-    Symbol? addedGlyph;
-    try {
-      final v = animated.current;
-      final label = animated.displayLabel;
-      final train = animated.isTrain;
-      added = await controller.addSymbol(
-        SymbolOptions(
-          geometry: LatLng(v.latitude, v.longitude),
-          iconImage: _arrowImageName,
-          iconRotate: v.course ?? 0,
-          iconSize: _iconSize,
-          iconColor: animated.displayColor,
-          // Train lines show a glyph in the body instead of the line number.
-          textField: train ? null : label,
-          textColor: train ? null : animated.displayTextColor,
-          // Line number centered in the circle body.
-          textSize: train ? null : _textSizeFor(label),
-          textOffset: train ? null : _textOffset,
-        ),
-      );
-      if (train) {
-        addedGlyph = await controller.addSymbol(
-          SymbolOptions(
-            geometry: LatLng(v.latitude, v.longitude),
-            iconImage: _trainGlyphImageName,
-            // No iconRotate: the pictogram stays upright at any heading.
-            iconSize: _trainGlyphSize,
-            iconColor: animated.displayTextColor,
-          ),
-        );
-      }
-      animated.renderedTrain = train;
-    } catch (e) {
-      debugPrint('addSymbol failed: $e');
-      animated.addInFlight = false;
-      // Keep no handle from a partially created marker.
-      await _removeHandles(controller, added, addedGlyph);
-      return;
-    }
-    animated.addInFlight = false;
-    if (animated.dropAfterAdd ||
-        !_vehicles.containsKey(animated.current.vehicleId)) {
-      // A remove (zoom-out, eviction, vehicle gone) arrived mid-add.
-      animated.dropAfterAdd = false;
-      await _removeHandles(controller, added, addedGlyph);
-      return;
-    }
-    animated.symbol = added;
-    animated.glyph = addedGlyph;
-  }
-
-  Future<void> _removeHandles(
-    MapLibreMapController controller,
-    Symbol? symbol,
-    Symbol? glyph,
-  ) async {
-    for (final handle in [symbol, glyph]) {
-      if (handle == null) continue;
-      try {
-        await controller.removeSymbol(handle);
-      } catch (e) {
-        debugPrint('removeSymbol failed: $e');
-      }
-    }
-  }
-
-  /// Marker image is baked per train/non-train, so a flip between the two
-  /// needs a new symbol instead of an in-place update.
-  Future<void> _rebuildSymbol(_AnimatedVehicle animated) async {
-    if (animated.addInFlight) return;
-    await _removeSymbol(animated);
-    if (!_vehicles.containsKey(animated.current.vehicleId) ||
-        _zoom < _markerZoom) {
-      return;
-    }
-    animated.snap();
-    await _addSymbol(animated);
-  }
-
-  Future<void> _removeSymbol(_AnimatedVehicle animated) async {
-    if (animated.addInFlight) {
-      // Add still awaiting native handle; _addSymbol removes it on arrival.
-      animated.dropAfterAdd = true;
-      return;
-    }
-    final controller = _mapController;
-    final symbol = animated.symbol;
-    final glyph = animated.glyph;
-    animated.symbol = null;
-    animated.glyph = null;
-    if (controller == null) return;
-    await _removeHandles(controller, symbol, glyph);
-  }
-
-  Future<void> _updateSymbolSafe(
-    MapLibreMapController controller,
-    Symbol symbol,
-    SymbolOptions options,
-  ) async {
-    try {
-      await controller.updateSymbol(symbol, options);
-    } catch (e) {
-      debugPrint('updateSymbol failed: $e');
-    }
+  /// Adds the marker source and its two data-driven symbol layers.
+  ///
+  /// Everything that used to be a per-marker annotation property (rotation,
+  /// colour, label, glyph) is a feature property here, so one source update
+  /// moves every marker and the GPU does the rest.
+  Future<void> _setupMarkerLayers(MapLibreMapController controller) async {
+    await controller.addSource(
+      _markerSourceId,
+      GeojsonSourceProperties(data: _markerFeatureCollection()),
+    );
+    // The zoom swap is a layer bound, so nothing is created or destroyed while
+    // the user zooms through the threshold.
+    final minzoom = _markersMinZoom;
+    await controller.addSymbolLayer(
+      _markerSourceId,
+      _markerLayerId,
+      SymbolLayerProperties(
+        iconImage: [Expressions.get, 'icon'],
+        iconSize: _iconSize,
+        iconRotate: [Expressions.get, 'rotate'],
+        iconColor: [Expressions.get, 'color'],
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+        textField: [Expressions.get, 'label'],
+        textColor: [Expressions.get, 'textColor'],
+        textSize: [Expressions.get, 'textSize'],
+        textOffset: [Expressions.get, 'textOffset'],
+        textAllowOverlap: true,
+        textIgnorePlacement: true,
+      ),
+      minzoom: minzoom,
+    );
+    // Train pictogram on its own layer: no `iconRotate`, so the glyph stays
+    // upright while the arrow underneath marks the heading.
+    await controller.addSymbolLayer(
+      _markerSourceId,
+      _markerGlyphLayerId,
+      SymbolLayerProperties(
+        iconImage: _trainGlyphImageName,
+        iconSize: _trainGlyphSize,
+        iconColor: [Expressions.get, 'textColor'],
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+      ),
+      filter: [
+        '==',
+        [Expressions.get, 'isTrain'],
+        1,
+      ],
+      minzoom: minzoom,
+    );
   }
 
   /// Circle body of radius 20 centered in the 64px canvas, with a pointed
@@ -639,55 +634,122 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
     );
   }
 
+  /// Cluster layers are created with `cluster`, `clusterMinPoints` and
+  /// `maxzoom`, none of which can be changed in place, so a settings change
+  /// recreates the source and layers.
+  Future<void> _rebuildLayers() async {
+    final controller = _mapController;
+    if (controller == null) return;
+    _clusterReady = false;
+    for (final layerId in [
+      _markerGlyphLayerId,
+      _markerLayerId,
+      _trainDotLayerId,
+      _dotLabelLayerId,
+      _dotLayerId,
+      _clusterCountLayerId,
+      _clusterCirclesLayerId,
+    ]) {
+      try {
+        await controller.removeLayer(layerId);
+      } catch (e) {
+        // Absent layers are fine: clustering may be off.
+        debugPrint('removeLayer $layerId failed: $e');
+      }
+    }
+    for (final sourceId in [_markerSourceId, _clusterSourceId]) {
+      try {
+        await controller.removeSource(sourceId);
+      } catch (e) {
+        debugPrint('removeSource failed: $e');
+      }
+    }
+    if (!_styleReady) return;
+    try {
+      await _setupClusterLayers(controller);
+      await _setupMarkerLayers(controller);
+    } catch (e) {
+      debugPrint('layer rebuild failed: $e');
+    }
+    _updateWantedMarkers();
+    await _refreshClusterSource();
+    await _refreshMarkerSource();
+  }
+
+  /// Applies new view options, rebuilding the layers only when a setting that
+  /// is fixed at creation time changed.
+  void _applyOptions(VehicleViewOptions next) {
+    final needsRebuild = !_options.sameLayers(next);
+    setState(() => _options = next);
+    if (needsRebuild) {
+      unawaited(_rebuildLayers());
+      return;
+    }
+    unawaited(_refreshClusterSource());
+    unawaited(_syncSymbolsToZoom());
+  }
+
+  Future<void> _openViewOptions() async {
+    await showVehicleViewOptionsSheet(
+      context,
+      options: _options,
+      onChanged: _applyOptions,
+    );
+  }
+
   Future<void> _setupClusterLayers(MapLibreMapController controller) async {
+    final maxzoom = _dotsMaxZoom;
     await controller.addSource(
       _clusterSourceId,
       GeojsonSourceProperties(
         data: _featureCollection(),
-        cluster: true,
+        cluster: _options.clustering,
         clusterRadius: _clusterRadius,
-        clusterMinPoints: _clusterMinPoints,
-        // Stop clustering once markers take over at [_markerZoom].
-        clusterMaxZoom: _markerZoom,
+        clusterMinPoints: _options.clusterMinPoints.toDouble(),
+        // Stop clustering once markers take over.
+        clusterMaxZoom: maxzoom ?? 18,
       ),
     );
-    // Cluster bubbles, sized by point count.
-    await controller.addCircleLayer(
-      _clusterSourceId,
-      _clusterCirclesLayerId,
-      CircleLayerProperties(
-        circleRadius: [
-          Expressions.step,
-          [Expressions.get, 'point_count'],
-          16,
-          10,
-          22,
-          50,
-          30,
-        ],
-        circleColor: const Color(0xFF1d4ed8).toHexStringRGB(),
-        circleOpacity: 0.9,
-        circleStrokeWidth: 2,
-        circleStrokeColor: '#ffffff',
-      ),
-      filter: [Expressions.has, 'point_count'],
-      // Exclusive swap: clusters only below [_markerZoom], symbols above.
-      maxzoom: _markerZoom,
-    );
-    // Cluster count labels.
-    await controller.addSymbolLayer(
-      _clusterSourceId,
-      _clusterCountLayerId,
-      SymbolLayerProperties(
-        textField: [Expressions.get, 'point_count_abbreviated'],
-        textSize: 12,
-        textColor: '#ffffff',
-        textAllowOverlap: true,
-      ),
-      filter: [Expressions.has, 'point_count'],
-      maxzoom: _markerZoom,
-    );
-    // Individual dots for unclustered vehicles: line color + short name.
+    if (_options.clustering) {
+      // Cluster bubbles, sized by point count.
+      await controller.addCircleLayer(
+        _clusterSourceId,
+        _clusterCirclesLayerId,
+        CircleLayerProperties(
+          circleRadius: [
+            Expressions.step,
+            [Expressions.get, 'point_count'],
+            16,
+            10,
+            22,
+            50,
+            30,
+          ],
+          circleColor: const Color(0xFF1d4ed8).toHexStringRGB(),
+          circleOpacity: 0.9,
+          circleStrokeWidth: 2,
+          circleStrokeColor: '#ffffff',
+        ),
+        filter: [Expressions.has, 'point_count'],
+        // Exclusive swap: clusters only below the marker zoom.
+        maxzoom: maxzoom,
+      );
+      // Cluster count labels.
+      await controller.addSymbolLayer(
+        _clusterSourceId,
+        _clusterCountLayerId,
+        SymbolLayerProperties(
+          textField: [Expressions.get, 'point_count_abbreviated'],
+          textSize: 12,
+          textColor: '#ffffff',
+          textAllowOverlap: true,
+        ),
+        filter: [Expressions.has, 'point_count'],
+        maxzoom: maxzoom,
+      );
+    }
+    // Individual dots: line color + short name. Without clustering these are
+    // every vehicle; with clustering only the unclustered ones.
     await controller.addCircleLayer(
       _clusterSourceId,
       _dotLayerId,
@@ -702,8 +764,8 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
         '!',
         [Expressions.has, 'point_count'],
       ],
-      // Dots only below the marker zoom; symbols take over above it.
-      maxzoom: _markerZoom,
+      // Hidden once animated markers take over.
+      maxzoom: maxzoom,
     );
     // Short-name labels inside the dots.
     await controller.addSymbolLayer(
@@ -720,7 +782,7 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
         '!',
         [Expressions.has, 'point_count'],
       ],
-      maxzoom: _markerZoom,
+      maxzoom: maxzoom,
     );
     // Train lines show a glyph instead of the (empty) short name.
     await _ensureTrainGlyphImage(controller);
@@ -741,7 +803,7 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
         [Expressions.get, 'isTrain'],
         1,
       ],
-      maxzoom: _markerZoom,
+      maxzoom: maxzoom,
     );
     _clusterReady = true;
   }
@@ -752,35 +814,21 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
     _styleReady = true;
     _imageReady = false;
     _clusterReady = false;
-    // Style reloads wipe registered images; they are re-created on demand.
-    // Style reloads wipe registered images; re-created below.
+    // Style reloads wipe registered images and layers; recreate both. The
+    // overlap settings are layer properties now, not annotation flags.
     try {
       await _ensureArrowImage(controller);
       await _ensureTrainGlyphImage(controller);
-      // Show every vehicle even when markers collide.
-      await controller.setSymbolIconAllowOverlap(true);
-      await controller.setSymbolIconIgnorePlacement(true);
-      await controller.setSymbolTextAllowOverlap(true);
-      await controller.setSymbolTextIgnorePlacement(true);
     } catch (e) {
-      debugPrint('arrow image setup failed: $e');
+      debugPrint('marker image setup failed: $e');
     }
     try {
       await _setupClusterLayers(controller);
+      await _setupMarkerLayers(controller);
     } catch (e) {
-      debugPrint('cluster layer setup failed: $e');
-    }
-    // Style reloads wipe symbols; re-add visible ones.
-    for (final animated in _vehicles.values) {
-      animated.symbol = null;
-      animated.glyph = null;
-      animated.addInFlight = false;
-      animated.dropAfterAdd = false;
-      animated.renderedTrain = false;
-      animated.snap();
+      debugPrint('layer setup failed: $e');
     }
     await _syncSymbolsToZoom();
-    await _refreshClusterSource();
   }
 
   @override
@@ -821,15 +869,30 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
             child: Text(_error!),
           ),
         Expanded(
-          child: MapLibreMap(
-            initialCameraPosition: _initialCamera,
-            styleString: MapLibreStyles.openfreemapLiberty,
-            onMapCreated: (controller) => _mapController = controller,
-            onStyleLoadedCallback: _onStyleLoaded,
-            onCameraIdle: _onCameraIdle,
-            trackCameraPosition: true,
-            // Show every vehicle even when markers collide.
-            annotationOrder: const [AnnotationType.symbol],
+          child: Stack(
+            children: [
+              MapLibreMap(
+                initialCameraPosition: _initialCamera,
+                styleString: MapLibreStyles.openfreemapLiberty,
+                onMapCreated: (controller) => _mapController = controller,
+                onStyleLoadedCallback: _onStyleLoaded,
+                onCameraIdle: _onCameraIdle,
+                trackCameraPosition: true,
+                // Show every vehicle even when markers collide.
+                annotationOrder: const [AnnotationType.symbol],
+              ),
+              Positioned(
+                top: 12,
+                left: 12,
+                child: IconButton.filledTonal(
+                  onPressed: _openViewOptions,
+                  tooltip: 'View options',
+                  icon: Icon(
+                    _options.showsAllKinds ? Icons.tune : Icons.filter_alt_off,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -860,24 +923,9 @@ class _AnimatedVehicle {
       _lastUpdate = now;
 
   VehiclePosition current;
-  Symbol? symbol;
 
-  /// Upright train pictogram drawn over the marker body for train lines.
-  Symbol? glyph;
-
-  /// True while addSymbol's await is outstanding. Guards _syncSymbolsToZoom
-  /// against starting a duplicate add (leaked trace) for the same vehicle.
-  bool addInFlight = false;
-
-  /// Set by _removeSymbol when a removal arrives mid-add; the add completion
-  /// then deletes the just-created native symbol instead of keeping it.
-  bool dropAfterAdd = false;
-
-  /// Train lines show an icon in the marker body instead of the line number.
+  /// Train lines show a pictogram in the marker body instead of the number.
   bool get isTrain => displayLabel.toLowerCase().contains('tåg');
-
-  /// Whether the current marker was built as the train variant.
-  bool renderedTrain = false;
 
   double _fromLat;
   double _fromLng;
@@ -981,18 +1029,6 @@ class _AnimatedVehicle {
               math.pi;
     }
     return _renderedLat != prevLat || _renderedLng != prevLng;
-  }
-
-  void snap() {
-    _renderedLat = current.latitude;
-    _renderedLng = current.longitude;
-    _renderedCourse = current.course ?? _renderedCourse;
-    _fromLat = _renderedLat;
-    _fromLng = _renderedLng;
-    _fromCourse = _renderedCourse;
-    _segmentElapsed = _segmentDuration;
-    // No dead reckoning from a snapped position; wait for a real fix.
-    _speedMs = 0;
   }
 
   String get displayLabel {

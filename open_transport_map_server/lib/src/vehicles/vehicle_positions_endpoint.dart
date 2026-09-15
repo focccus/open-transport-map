@@ -136,6 +136,7 @@ class VehiclePositionsEndpoint extends Endpoint {
       destination: json['destination'] as String?,
       via: json['via'] as String?,
       lineShortName: line?.shortName,
+      lineTransportMode: line?.transportMode,
       lineBackgroundColor: line?.backgroundColor,
       lineForegroundColor: line?.foregroundColor,
     );
@@ -166,6 +167,7 @@ class VehiclePositionsEndpoint extends Endpoint {
         if (gid == null) continue;
         lines[gid] = _LineInfo(
           shortName: entry['shortName'] as String? ?? '',
+          transportMode: entry['transportMode'] as String? ?? '',
           backgroundColor: entry['backgroundColor'] as String? ?? '#1d4ed8',
           foregroundColor: entry['foregroundColor'] as String? ?? '#ffffff',
         );
@@ -202,11 +204,17 @@ String lineGidForServiceJourney(String serviceJourneyGid) {
 class _LineInfo {
   const _LineInfo({
     required this.shortName,
+    required this.transportMode,
     required this.backgroundColor,
     required this.foregroundColor,
   });
 
   final String shortName;
+
+  /// Upstream mode: `bus`, `tram`, `train`, `ferry`, `taxi`. Relayed to the
+  /// client so vehicle types can be filtered on fact rather than on the line
+  /// number, which overlaps between modes (buses and trams share 1-14).
+  final String transportMode;
   final String backgroundColor;
   final String foregroundColor;
 }
