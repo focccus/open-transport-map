@@ -59,6 +59,8 @@ serverpod:
   flutter_apps:
     open_transport_map:
       path: ../open_transport_map_flutter
-      displayName: "Open transport map app"
+      displayName: "Open Transport Map"
       auto_launch: true
       target: lib/driver.dart
+      dart-define:
+        SERVER_URL=http://desktop:8080

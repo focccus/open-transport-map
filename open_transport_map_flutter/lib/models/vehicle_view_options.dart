@@ -74,15 +74,15 @@ class VehicleViewOptions {
     VehicleKind.boat,
   };
 
-  static const defaultClusterMinPoints = 10;
+  static const defaultClusterMinPoints = 20;
   static const minClusterMinPoints = 2;
-  static const maxClusterMinPoints = 50;
+  static const maxClusterMinPoints = 100;
 
-  static const defaultAnimationZoom = 13.5;
-  static const minAnimationZoom = 10.0;
+  static const defaultAnimationZoom = 10.0;
+  static const minAnimationZoom = 8.0;
   static const maxAnimationZoom = 18.0;
 
-  static const defaultMaxAnimatedVehicles = 50;
+  static const defaultMaxAnimatedVehicles = 500;
   static const minAnimatedVehiclesLimit = 5;
   static const maxAnimatedVehiclesLimit = 2000;
 

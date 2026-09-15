@@ -79,10 +79,10 @@ void main() {
       const options = VehicleViewOptions();
       expect(options.showsAllKinds, isTrue);
       expect(options.clustering, isTrue);
-      expect(options.clusterMinPoints, 10);
+      expect(options.clusterMinPoints, 20);
       expect(options.animations, isTrue);
-      expect(options.animationZoom, 13.5);
-      expect(options.maxAnimatedVehicles, 50);
+      expect(options.animationZoom, 10);
+      expect(options.maxAnimatedVehicles, 500);
     });
 
     test('kinds toggle without disturbing other settings', () {
