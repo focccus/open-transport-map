@@ -1,0 +1,13 @@
+name: _
+publish_to: none
+
+environment:
+  sdk: '^3.12.2'
+
+workspace:
+  - open_transport_map_client
+  - open_transport_map_server
+  - open_transport_map_flutter
+dependencies:
+  maplibre_gl: ^0.27.1
+

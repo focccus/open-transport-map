@@ -1,0 +1,17 @@
+class: VehiclePosition
+fields:
+  vehicleId: String
+  timestamp: DateTime
+  serviceJourneyGid: String?
+  status: String?
+  atStop: bool?
+  lastStopPointGid: String?
+  latitude: double
+  longitude: double
+  speedKmh: double?
+  course: double?
+  destination: String?
+  via: String?
+  lineShortName: String?
+  lineBackgroundColor: String?
+  lineForegroundColor: String?

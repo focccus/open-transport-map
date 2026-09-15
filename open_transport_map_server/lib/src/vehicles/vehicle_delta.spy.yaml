@@ -1,0 +1,4 @@
+class: VehicleDelta
+fields:
+  updated: List<VehiclePosition>
+  removed: List<String>
