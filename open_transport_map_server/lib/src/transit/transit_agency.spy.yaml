@@ -1,0 +1,14 @@
+class: TransitAgency
+table: transit_agency
+fields:
+  externalId: String
+  name: String
+  timezone: String, default='Europe/Stockholm'
+  countryCode: String, default='SE'
+  city: String
+  syncedAt: DateTime?
+
+indexes:
+  transit_agency_external_id_idx:
+    fields: externalId
+    unique: true

@@ -33,11 +33,14 @@ dependencies:
   maplibre_gl: 0.27.1
   open_transport_map_client:
     path: ../open_transport_map_client
+  path: ^1.9.1
+  path_provider: ^2.1.6
   serverpod_auth_idp_flutter: 4.0.0
+  serverpod_database: 4.0.0
   serverpod_flutter: 4.0.0
 
 dev_dependencies:
-  # Used for agents to drive the app through the Dart MCP
+  # Used by agents to drive the app through the Dart MCP
   flutter_driver:
     sdk: flutter
   flutter_lints: '>=3.0.0 <7.0.0'

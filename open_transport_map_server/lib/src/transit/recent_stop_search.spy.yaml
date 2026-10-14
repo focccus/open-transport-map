@@ -1,0 +1,10 @@
+class: RecentStopSearch
+table: recent_stop_search
+database: client
+fields:
+  query: String
+  searchedAt: DateTime
+indexes:
+  recent_stop_search_query_idx:
+    fields: query
+    unique: true

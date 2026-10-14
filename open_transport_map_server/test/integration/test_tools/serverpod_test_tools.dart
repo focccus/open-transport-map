@@ -13,6 +13,20 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _ida;
 import 'dart:io' as _idi;
+import 'package:open_transport_map_server/src/generated/future_calls.dart'
+    as _ibcnyg44;
+import 'package:open_transport_map_server/src/generated/transit/service_journey_call.dart'
+    as _ilv2yn39;
+import 'package:open_transport_map_server/src/generated/transit/stop_departures_response.dart'
+    as _i1wg1hc3;
+import 'package:open_transport_map_server/src/generated/transit/transit_route_shape.dart'
+    as _i32ru7g2;
+import 'package:open_transport_map_server/src/generated/transit/transit_stop_area.dart'
+    as _ic92egf6;
+import 'package:open_transport_map_server/src/generated/transit/transit_stop_point.dart'
+    as _ikyw9wov;
+import 'package:open_transport_map_server/src/generated/transit/transit_zone.dart'
+    as _i313ktem;
 import 'package:open_transport_map_server/src/generated/vehicles/vehicle_delta.dart'
     as _inhzfj46;
 import 'package:serverpod/serverpod.dart' as _is;
@@ -41,6 +55,9 @@ export 'package:serverpod_test/serverpod_test_public_exports.dart';
 /// [applyMigrations] Whether pending migrations should be applied when starting Serverpod. Defaults to `true`
 ///
 /// [enableSessionLogging] Whether session logging should be enabled. Defaults to `false`
+///
+/// [ephemeralDatabase] Whether this group gets its own empty database, created when the group starts and dropped when it finishes. Defaults to `true`.
+/// Set this to `false` to use the database configured for [runMode], including a previously seeded database. [configOverride] can still replace that database. The configured database is not created or dropped, so groups that share it cannot run in parallel. [rollbackDatabase] still controls whether writes inside the group are rolled back.
 ///
 /// [rollbackDatabase] Options for when to rollback the database during the test lifecycle.
 /// By default `withServerpod` does all database operations inside a transaction that is rolled back after each `test` case.
@@ -111,6 +128,7 @@ void withServerpod(
   _is.ServerpodConfig Function(_is.ServerpodConfig)? configOverride,
   _is.DatabaseInterceptor? databaseInterceptor,
   bool? enableSessionLogging,
+  bool? ephemeralDatabase,
   _is.ExperimentalFeatures? experimentalFeatures,
   _ist.RollbackDatabase? rollbackDatabase,
   String? runMode,
@@ -129,6 +147,7 @@ void withServerpod(
       serializationManager: Protocol(),
       runMode: runMode,
       applyMigrations: applyMigrations,
+      ephemeralDatabase: ephemeralDatabase,
       isDatabaseEnabled: true,
       serverpodLoggingMode: serverpodLoggingMode,
       testServerOutputMode: testServerOutputMode,
@@ -147,9 +166,13 @@ void withServerpod(
 }
 
 class TestEndpoints {
+  late final futureCalls = _FutureCalls();
+
   late final _EmailIdpEndpoint emailIdp;
 
   late final _JwtRefreshEndpoint jwtRefresh;
+
+  late final _TransitEndpoint transit;
 
   late final _VehiclePositionsEndpoint vehiclePositions;
 }
@@ -169,11 +192,19 @@ class _InternalTestEndpoints extends TestEndpoints
       endpoints,
       serializationManager,
     );
+    transit = _TransitEndpoint(
+      endpoints,
+      serializationManager,
+    );
     vehiclePositions = _VehiclePositionsEndpoint(
       endpoints,
       serializationManager,
     );
   }
+}
+
+class _FutureCalls {
+  late final transitDailySync = _TransitDailySyncFutureCall();
 }
 
 class _EmailIdpEndpoint {
@@ -494,6 +525,356 @@ class _JwtRefreshEndpoint {
   }
 }
 
+class _TransitEndpoint {
+  _TransitEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<List<_ic92egf6.TransitStopArea>> getStopAreasInBounds(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required double north,
+    required double south,
+    required double east,
+    required double west,
+    String? agencyExternalId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'transit',
+            method: 'getStopAreasInBounds',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'transit',
+          methodName: 'getStopAreasInBounds',
+          parameters: _ist.testObjectToJson({
+            'north': north,
+            'south': south,
+            'east': east,
+            'west': west,
+            'agencyExternalId': agencyExternalId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<List<_ic92egf6.TransitStopArea>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<List<_ic92egf6.TransitStopArea>> searchStopAreas(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required String query,
+    int? limit,
+    String? agencyExternalId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'transit',
+            method: 'searchStopAreas',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'transit',
+          methodName: 'searchStopAreas',
+          parameters: _ist.testObjectToJson({
+            'query': query,
+            'limit': limit,
+            'agencyExternalId': agencyExternalId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<List<_ic92egf6.TransitStopArea>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<List<_ic92egf6.TransitStopArea>> listStopAreas(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required int limit,
+    required int offset,
+    String? agencyExternalId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'transit',
+            method: 'listStopAreas',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'transit',
+          methodName: 'listStopAreas',
+          parameters: _ist.testObjectToJson({
+            'limit': limit,
+            'offset': offset,
+            'agencyExternalId': agencyExternalId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<List<_ic92egf6.TransitStopArea>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<List<_ikyw9wov.TransitStopPoint>> getStopPointsInBounds(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required double north,
+    required double south,
+    required double east,
+    required double west,
+    String? agencyExternalId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'transit',
+            method: 'getStopPointsInBounds',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'transit',
+          methodName: 'getStopPointsInBounds',
+          parameters: _ist.testObjectToJson({
+            'north': north,
+            'south': south,
+            'east': east,
+            'west': west,
+            'agencyExternalId': agencyExternalId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<List<_ikyw9wov.TransitStopPoint>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<List<_i32ru7g2.TransitRouteShape>> getRouteShapesInBounds(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required double north,
+    required double south,
+    required double east,
+    required double west,
+    String? agencyExternalId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'transit',
+            method: 'getRouteShapesInBounds',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'transit',
+          methodName: 'getRouteShapesInBounds',
+          parameters: _ist.testObjectToJson({
+            'north': north,
+            'south': south,
+            'east': east,
+            'west': west,
+            'agencyExternalId': agencyExternalId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<List<_i32ru7g2.TransitRouteShape>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Stream<_i1wg1hc3.StopDeparturesResponse> watchStopDepartures(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required String gid,
+    required bool isStopArea,
+    String? agencyExternalId,
+  }) {
+    var _localTestStreamManager =
+        _ist.TestStreamManager<_i1wg1hc3.StopDeparturesResponse>();
+    _ist.callStreamFunctionAndHandleExceptions(
+      () async {
+        var _localUniqueSession =
+            (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+              endpoint: 'transit',
+              method: 'watchStopDepartures',
+            );
+        var _localCallContext = await _endpointDispatch
+            .getMethodStreamCallContext(
+              createSessionCallback: (_) => _localUniqueSession,
+              endpointPath: 'transit',
+              methodName: 'watchStopDepartures',
+              arguments: {
+                'gid': gid,
+                'isStopArea': isStopArea,
+                'agencyExternalId': agencyExternalId,
+              },
+              requestedInputStreams: [],
+              serializationManager: _serializationManager,
+            );
+        await _localTestStreamManager.callStreamMethod(
+          _localCallContext,
+          _localUniqueSession,
+          {},
+        );
+      },
+      _localTestStreamManager.outputStreamController,
+    );
+    return _localTestStreamManager.outputStreamController.stream;
+  }
+
+  _ida.Future<List<_ilv2yn39.ServiceJourneyCall>> getServiceJourneyCalls(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required String stopPointGid,
+    required String detailsReference,
+    String? agencyExternalId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'transit',
+            method: 'getServiceJourneyCalls',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'transit',
+          methodName: 'getServiceJourneyCalls',
+          parameters: _ist.testObjectToJson({
+            'stopPointGid': stopPointGid,
+            'detailsReference': detailsReference,
+            'agencyExternalId': agencyExternalId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<List<_ilv2yn39.ServiceJourneyCall>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<List<_i313ktem.TransitZone>> getZones(
+    _ist.TestSessionBuilder sessionBuilder, {
+    String? agencyExternalId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'transit',
+            method: 'getZones',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'transit',
+          methodName: 'getZones',
+          parameters: _ist.testObjectToJson({
+            'agencyExternalId': agencyExternalId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<List<_i313ktem.TransitZone>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<bool> triggerSync(
+    _ist.TestSessionBuilder sessionBuilder, {
+    String? agencyExternalId,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'transit',
+            method: 'triggerSync',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'transit',
+          methodName: 'triggerSync',
+          parameters: _ist.testObjectToJson({
+            'agencyExternalId': agencyExternalId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<bool>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
 class _VehiclePositionsEndpoint {
   _VehiclePositionsEndpoint(
     this._endpointDispatch,
@@ -510,6 +891,7 @@ class _VehiclePositionsEndpoint {
     required double south,
     required double east,
     required double west,
+    String? agencyExternalId,
   }) {
     var _localTestStreamManager =
         _ist.TestStreamManager<_inhzfj46.VehicleDelta>();
@@ -530,6 +912,7 @@ class _VehiclePositionsEndpoint {
                 'south': south,
                 'east': east,
                 'west': west,
+                'agencyExternalId': agencyExternalId,
               },
               requestedInputStreams: [],
               serializationManager: _serializationManager,
@@ -543,5 +926,20 @@ class _VehiclePositionsEndpoint {
       _localTestStreamManager.outputStreamController,
     );
     return _localTestStreamManager.outputStreamController.stream;
+  }
+}
+
+class _TransitDailySyncFutureCall {
+  Future<void> sync(_ist.TestSessionBuilder sessionBuilder) async {
+    var _localUniqueSession =
+        (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild();
+    try {
+      await _ibcnyg44.TransitDailySyncSyncFutureCall().invoke(
+        _localUniqueSession,
+        null,
+      );
+    } finally {
+      await _localUniqueSession.close();
+    }
   }
 }

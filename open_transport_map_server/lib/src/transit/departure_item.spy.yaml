@@ -1,0 +1,30 @@
+class: DepartureItem
+fields:
+  serviceJourneyGid: String
+  lineDesignation: String
+  lineShortName: String
+  lineName: String?
+  destination: String
+  via: String?
+  platform: String?
+  plannedTime: DateTime
+  estimatedTime: DateTime?
+  isCancelled: bool
+  backgroundColor: String?
+  foregroundColor: String?
+  borderColor: String?
+  transportMode: String?
+  occupancyLevel: String?
+
+  ### Name of the call after this one on the journey, known only once the
+  ### journey details have been fetched. Null while that is pending, and for a
+  ### journey that terminates at this stop.
+  nextStop: String?
+
+  ### Handle for the departure details endpoint, and the stop point the
+  ### departure is observed at. Both come from the upstream departures entry and
+  ### are what the timeline view passes back to fetch the journey's calls. Null
+  ### when the upstream entry omitted them, in which case the row has no
+  ### timeline to open.
+  detailsReference: String?
+  stopPointGid: String?

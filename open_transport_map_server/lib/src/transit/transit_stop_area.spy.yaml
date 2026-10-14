@@ -1,0 +1,17 @@
+class: TransitStopArea
+table: transit_stop_area
+fields:
+  agencyId: int, relation(parent=transit_agency, onDelete=Cascade)
+  externalId: String
+  name: String
+  latitude: double
+  longitude: double
+  municipality: String?
+  tariffZoneId: int?, relation(parent=transit_zone, onDelete=SetNull)
+
+indexes:
+  transit_stop_area_agency_ext_idx:
+    fields: agencyId, externalId
+    unique: true
+  transit_stop_area_coords_idx:
+    fields: latitude, longitude

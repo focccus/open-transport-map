@@ -1,0 +1,10 @@
+class: StopDeparturesResponse
+fields:
+  stopGid: String
+  stopName: String
+  isStopArea: bool
+  stopAreaGid: String?
+  municipality: String?
+  platform: String?
+  departures: List<DepartureItem>
+  routeShapesGeoJson: String

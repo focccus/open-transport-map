@@ -115,6 +115,42 @@ class _VehicleViewOptionsSheetState extends State<_VehicleViewOptionsSheet> {
               ),
 
             const Divider(height: 24),
+            _SectionHeader('Map layers'),
+            SwitchListTile(
+              dense: true,
+              secondary: const Icon(Icons.route),
+              title: const Text('Route lines'),
+              value: _options.showRoutes,
+              onChanged: (enabled) {
+                final next = _options.copyWith(showRoutes: enabled);
+                _preview(next);
+                _commit(next);
+              },
+            ),
+            SwitchListTile(
+              dense: true,
+              secondary: const Icon(Icons.location_on_outlined),
+              title: const Text('Stops'),
+              subtitle: const Text('Stations at low zoom, platforms at street zoom'),
+              value: _options.showStops,
+              onChanged: (enabled) {
+                final next = _options.copyWith(showStops: enabled);
+                _preview(next);
+                _commit(next);
+              },
+            ),
+            SwitchListTile(
+              dense: true,
+              secondary: const Icon(Icons.map_outlined),
+              title: const Text('Tariff zones'),
+              value: _options.showZones,
+              onChanged: (enabled) {
+                final next = _options.copyWith(showZones: enabled);
+                _preview(next);
+                _commit(next);
+              },
+            ),
+
             _SectionHeader('Clustering'),
             SwitchListTile(
               dense: true,

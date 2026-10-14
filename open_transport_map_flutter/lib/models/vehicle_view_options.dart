@@ -63,6 +63,9 @@ class VehicleViewOptions {
     this.animations = true,
     this.animationZoom = defaultAnimationZoom,
     this.maxAnimatedVehicles = defaultMaxAnimatedVehicles,
+    this.showRoutes = true,
+    this.showStops = true,
+    this.showZones = false,
   });
 
   static const _allKinds = {
@@ -106,6 +109,15 @@ class VehicleViewOptions {
   /// center win.
   final int maxAnimatedVehicles;
 
+  /// Whether route alignment lines are drawn.
+  final bool showRoutes;
+
+  /// Whether stop markers are drawn (hubs below zoom 13.5, platforms above).
+  final bool showStops;
+
+  /// Whether tariff zone polygons are drawn.
+  final bool showZones;
+
   bool get showsAllKinds => kinds.length == VehicleKind.values.length;
 
   bool showsKind(VehicleKind kind) => kinds.contains(kind);
@@ -127,6 +139,9 @@ class VehicleViewOptions {
     bool? animations,
     double? animationZoom,
     int? maxAnimatedVehicles,
+    bool? showRoutes,
+    bool? showStops,
+    bool? showZones,
   }) {
     return VehicleViewOptions(
       kinds: kinds ?? this.kinds,
@@ -135,6 +150,9 @@ class VehicleViewOptions {
       animations: animations ?? this.animations,
       animationZoom: animationZoom ?? this.animationZoom,
       maxAnimatedVehicles: maxAnimatedVehicles ?? this.maxAnimatedVehicles,
+      showRoutes: showRoutes ?? this.showRoutes,
+      showStops: showStops ?? this.showStops,
+      showZones: showZones ?? this.showZones,
     );
   }
 

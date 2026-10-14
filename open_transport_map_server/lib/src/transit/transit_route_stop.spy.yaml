@@ -1,0 +1,13 @@
+class: TransitRouteStop
+table: transit_route_stop
+fields:
+  routeShapeId: int, relation(parent=transit_route_shape, onDelete=Cascade)
+  stopPointId: int, relation(parent=transit_stop_point, onDelete=Cascade)
+  stopSequence: int
+
+indexes:
+  transit_route_stop_seq_idx:
+    fields: routeShapeId, stopSequence
+    unique: true
+  transit_route_stop_point_idx:
+    fields: stopPointId

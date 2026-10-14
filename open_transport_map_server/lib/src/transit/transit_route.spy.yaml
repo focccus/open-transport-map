@@ -1,0 +1,19 @@
+class: TransitRoute
+table: transit_route
+fields:
+  agencyId: int, relation(parent=transit_agency, onDelete=Cascade)
+  externalId: String
+  shortName: String
+  longName: String?
+  transportMode: String
+  backgroundColor: String?
+  foregroundColor: String?
+  borderColor: String?
+  cachedAt: DateTime?
+
+indexes:
+  transit_route_agency_ext_idx:
+    fields: agencyId, externalId
+    unique: true
+  transit_route_mode_idx:
+    fields: transportMode

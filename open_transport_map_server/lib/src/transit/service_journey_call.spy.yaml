@@ -1,0 +1,27 @@
+class: ServiceJourneyCall
+fields:
+  ### Stop point the journey calls at.
+  stopPointGid: String
+  name: String
+
+  ### Where the call is, used to frame the journey on the map and to place the
+  ### vehicle when the live feed does not cover it. Null when upstream gives no
+  ### geometry.
+  latitude: double?
+  longitude: double?
+
+  ### Platform the call is made from, the realtime one when upstream reports it.
+  ### Null for a stop point without platforms.
+  platform: String?
+
+  ### Arrival and departure times at this call. The estimate is null until the
+  ### upstream reports one; the "otherwise planned" estimate on the wire is
+  ### folded into it.
+  plannedArrivalTime: DateTime?
+  estimatedArrivalTime: DateTime?
+  plannedDepartureTime: DateTime?
+  estimatedDepartureTime: DateTime?
+
+  ### A cancelled call stays in the timeline, struck through, so the shape of the
+  ### journey is still readable.
+  isCancelled: bool

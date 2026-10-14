@@ -1,0 +1,14 @@
+class: CachedStopArea
+table: cached_stop_area
+database: client
+fields:
+  externalId: String
+  name: String
+  latitude: double
+  longitude: double
+  municipality: String?
+  syncedAt: DateTime
+indexes:
+  cached_stop_area_external_id_idx:
+    fields: externalId
+    unique: true

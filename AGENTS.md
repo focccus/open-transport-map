@@ -55,4 +55,6 @@ The server relays the upstream Västtrafik SSE feed through the streaming endpoi
 
 The Flutter app renders the feed in a MapLibre map. Below street-level zoom (13.5) it draws a clustered GeoJSON source: cluster bubbles with counts, and single dots carrying the line short name. Above that zoom the cluster and dot layers hide via `maxzoom` and up to 50 animated arrow symbols take over, nearest to the viewport center first. Each symbol interpolates along the segment from its previous to its current position, with a duration derived from the reported speed, driven by a `Ticker`.
 
+Stop search peeks from the bottom in a sheet on narrow layouts, so the bar is directly tappable, and sits centered across the top with Material's anchored results on wide ones. Picking a result clears the search, zooms the map to the stop, and fills its departure card.
+
 Sign-in is set up on the server (email identity provider, JWT) but not switched on in the UI. The app's `SignInScreen` can be wrapped around the map screen in `open_transport_map_flutter/lib/main.dart` to require authentication.

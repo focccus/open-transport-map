@@ -18,3 +18,5 @@ pubspec_overrides.yaml
 
 # Serverpod Cloud CLI
 .scloud/
+
+config/passwords.yaml

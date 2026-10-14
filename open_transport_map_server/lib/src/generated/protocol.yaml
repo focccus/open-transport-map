@@ -9,5 +9,15 @@ emailIdp:
   - hasAccount:
 jwtRefresh:
   - refreshAccessToken:
+transit:
+  - getStopAreasInBounds:
+  - searchStopAreas:
+  - listStopAreas:
+  - getStopPointsInBounds:
+  - getRouteShapesInBounds:
+  - watchStopDepartures:
+  - getServiceJourneyCalls:
+  - getZones:
+  - triggerSync:
 vehiclePositions:
   - watchVehicles:

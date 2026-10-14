@@ -1,0 +1,13 @@
+class: TransitZone
+table: transit_zone
+fields:
+  agencyId: int, relation(parent=transit_agency, onDelete=Cascade)
+  externalId: String
+  name: String
+  color: String?
+  geometryGeoJson: String?
+
+indexes:
+  transit_zone_agency_ext_idx:
+    fields: agencyId, externalId
+    unique: true

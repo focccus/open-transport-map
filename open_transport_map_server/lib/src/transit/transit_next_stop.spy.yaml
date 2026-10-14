@@ -1,0 +1,17 @@
+class: TransitNextStop
+table: transit_next_stop
+fields:
+  routeId: int, relation(parent=transit_route, onDelete=Cascade)
+  headsign: String
+
+  ### Stop point the departure is observed at. A journey's next call depends on
+  ### where you board it, so the cache is keyed per stop point, not just per
+  ### route and direction.
+  stopPointExternalId: String
+  nextStopName: String
+  cachedAt: DateTime?
+
+indexes:
+  transit_next_stop_lookup_idx:
+    fields: routeId, headsign, stopPointExternalId
+    unique: true

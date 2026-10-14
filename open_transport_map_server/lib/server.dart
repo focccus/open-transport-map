@@ -6,6 +6,7 @@ import 'package:serverpod_cloud_storage/serverpod_cloud_storage.dart';
 
 import 'src/cache_busting.dart';
 import 'src/generated/serverpod.dart';
+import 'src/transit/adapters/vasttrafik/vasttrafik_v3_adapter.dart';
 import 'src/web/routes/app_config_route.dart';
 
 /// The starting point of the Serverpod server.
@@ -100,6 +101,16 @@ void run(List<String> args) async {
     ),
   );
 
+  // Register transit provider adapters.
+  registerBuiltInTransitAdapters();
+
   // Start the server.
   await pod.start();
+
+  // Bootstrap the first daily sync; subsequent runs are rescheduled by
+  // the future call itself.
+  await pod.futureCalls
+      .callWithDelay(const Duration(seconds: 10))
+      .transitDailySync
+      .sync();
 }

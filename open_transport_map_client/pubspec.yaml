@@ -9,3 +9,4 @@ resolution: workspace
 dependencies:
   serverpod_auth_idp_client: 4.0.0
   serverpod_client: 4.0.0
+  serverpod_database: 4.0.0

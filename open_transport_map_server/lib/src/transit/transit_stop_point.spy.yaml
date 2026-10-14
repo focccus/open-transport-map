@@ -1,0 +1,20 @@
+class: TransitStopPoint
+table: transit_stop_point
+fields:
+  agencyId: int, relation(parent=transit_agency, onDelete=Cascade)
+  stopAreaId: int, relation(parent=transit_stop_area, onDelete=Cascade)
+  externalId: String
+  name: String
+  platform: String?
+  latitude: double
+  longitude: double
+  designation: String?
+
+indexes:
+  transit_stop_point_agency_ext_idx:
+    fields: agencyId, externalId
+    unique: true
+  transit_stop_point_area_idx:
+    fields: stopAreaId
+  transit_stop_point_coords_idx:
+    fields: latitude, longitude

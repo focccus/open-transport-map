@@ -1,0 +1,14 @@
+class: TransitRouteShape
+table: transit_route_shape
+fields:
+  routeId: int, relation(parent=transit_route, onDelete=Cascade)
+  directionId: int?
+  headsign: String?
+  geometryGeoJson: String
+  cachedAt: DateTime?
+
+indexes:
+  transit_route_shape_route_idx:
+    fields: routeId
+  transit_route_shape_lookup_idx:
+    fields: routeId, headsign
