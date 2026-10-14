@@ -227,7 +227,6 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
   Set<String> _placedMarkers = const {};
   String? _error;
   bool _connected = false;
-  int _eventCount = 0;
   double _zoom = _initialCamera.zoom;
   LatLngBounds _viewport = _initialBounds;
   VehicleViewOptions _options = const VehicleViewOptions();
@@ -382,7 +381,6 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
         existing.retarget(vehicle, now);
       }
     }
-    if (mounted) setState(() => _eventCount++);
     unawaited(_syncSymbolsToZoom());
     _scheduleClusterRefresh();
     // Re-center on each live update of that vehicle rather than on a clock, so
@@ -2104,29 +2102,40 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
           ),
         ),
         Positioned(
-          top: 12,
-          left: 12,
-          child: IconButton.filledTonal(
-            onPressed: _openViewOptions,
-            tooltip: 'View options',
-            icon: Icon(
-              _options.showsAllKinds ? Icons.tune : Icons.filter_alt_off,
+          top: 0,
+          left: 0,
+          child: SafeArea(
+            minimum: const EdgeInsets.all(12),
+            bottom: false,
+            right: false,
+            child: IconButton.filledTonal(
+              onPressed: _openViewOptions,
+              tooltip: 'View options',
+              icon: Icon(
+                _options.showsAllKinds ? Icons.tune : Icons.filter_alt_off,
+              ),
             ),
           ),
         ),
         if (wide)
           Positioned(
-            top: 12,
+            top: 0,
             left: 68,
             right: 68,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: StopAreaSearchBar(
-                  wide: true,
-                  onStopAreaSelected: _onStopAreaSelected,
-                  recentSearches: stopSearchStore.recentQueries,
-                  onSearchCommitted: stopSearchStore.recordSearch,
+            child: SafeArea(
+              minimum: const EdgeInsets.only(top: 12),
+              left: false,
+              right: false,
+              bottom: false,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: StopAreaSearchBar(
+                    wide: true,
+                    onStopAreaSelected: _onStopAreaSelected,
+                    recentSearches: stopSearchStore.recentQueries,
+                    onSearchCommitted: stopSearchStore.recordSearch,
+                  ),
                 ),
               ),
             ),
@@ -2190,36 +2199,43 @@ class _VehicleMapScreenState extends State<VehicleMapScreen>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _connected
-                      ? 'Vehicles live (${_vehicles.length}) · '
-                            'events $_eventCount'
-                      : 'Vehicles (disconnected)',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              TextButton(onPressed: _reconnect, child: const Text('Reconnect')),
-            ],
-          ),
-        ),
-        if (_error != null)
-          Container(
-            width: double.infinity,
-            color: Theme.of(context).colorScheme.errorContainer,
-            padding: const EdgeInsets.all(8),
-            child: Text(_error!),
-          ),
+        if (!_connected) _statusBanner(context),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) => _buildContent(constraints),
           ),
         ),
       ],
+    );
+  }
+
+  /// Shown while the live feed is not connected, with a retry. The banner is
+  /// drawn under the status bar, but its content respects the top safe area.
+  Widget _statusBanner(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      color: colors.errorContainer,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _error ?? 'Disconnected from the live feed.',
+                  style: TextStyle(color: colors.onErrorContainer),
+                ),
+              ),
+              TextButton(
+                onPressed: _reconnect,
+                child: const Text('Reconnect'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

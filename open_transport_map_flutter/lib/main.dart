@@ -29,29 +29,23 @@ class MyApp extends StatelessWidget {
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
-      home: const MyHomePage(title: 'Vehicle positions'),
+      home: const MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
+  const MyHomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      // To test authentication in this example app, uncomment the block below
-      // and remove the line above. This wraps the VehicleMapScreen with a
-      // SignInScreen, which automatically shows a sign-in UI when the user is
-      // not authenticated.
-      //
-      // body: SignInScreen(
-      //   child: const VehicleMapScreen(),
-      // ),
-      body: const VehicleMapScreen(),
-    );
+    // The map fills the screen; there is no app bar, so the map overlays handle
+    // their own safe area.
+    //
+    // To test authentication in this example app, replace the body with
+    // `SignInScreen(child: VehicleMapScreen())`. This wraps the map screen with
+    // a SignInScreen, which automatically shows a sign-in UI when the user is
+    // not authenticated.
+    return const Scaffold(body: VehicleMapScreen());
   }
 }
